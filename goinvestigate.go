@@ -46,12 +46,14 @@ concurrency.
 package goinvestigate
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 )
@@ -66,14 +68,15 @@ var maxGoroutines int = 10
 
 // format strings for API URIs
 var urls map[string]string = map[string]string{
-	"ip":            "/dnsdb/ip/%s/%s.json",
-	"domain":        "/dnsdb/name/%s/%s.json",
-	"related":       "/links/name/%s.json",
-	"score":         "/label/rface-gbt/name/%s.json",
-	"cooccurrences": "/recommendations/name/%s.json",
-	"security":      "/security/name/%s.json",
-	"whois":         "/whois/name/%s.json",
-	"infected":      "/infected/names/%s.json",
+	"ip":             "/dnsdb/ip/%s/%s.json",
+	"domain":         "/dnsdb/name/%s/%s.json",
+	"categorization": "/domains/categorization/%s",
+	"related":        "/links/name/%s.json",
+	"score":          "/label/rface-gbt/name/%s.json",
+	"cooccurrences":  "/recommendations/name/%s.json",
+	"security":       "/security/name/%s.json",
+	"whois":          "/whois/name/%s.json",
+	"infected":       "/infected/names/%s.json",
 }
 
 var supportedQueryTypes map[string]int = map[string]int{
@@ -147,6 +150,57 @@ func (inv *Investigate) Post(subUri string, body io.Reader) (*http.Response, err
 	}
 
 	return inv.Request(req)
+}
+
+// Get the domain status and categorization of a domain or list of domains.
+// 'domains' can be either a single domain, or a list of domains.
+// Setting 'labels' to true will give back categorizations in human-readable form.
+//
+// For more detail, see https://sgraph.opendns.com/docs/api#categorization
+func (inv *Investigate) Categorization(domains interface{}, labels bool) (map[string]interface{}, error) {
+	switch d := domains.(type) {
+	case string:
+		return inv.getCategorization(d, labels)
+	case []string:
+		return inv.postCategorization(d, labels)
+	default:
+		return nil, errors.New(
+			"domains must be either a string, or a list of strings")
+	}
+}
+
+func catUri(domain string, labels bool) string {
+	uri, err := url.Parse(fmt.Sprintf(urls["categorization"], domain))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	v := url.Values{}
+
+	if labels {
+		v.Set("showLabels", "true")
+	}
+
+	uri.RawQuery = v.Encode()
+	return uri.String()
+}
+
+func (inv *Investigate) getCategorization(domain string, labels bool) (map[string]interface{}, error) {
+	uri := catUri(domain, labels)
+	return inv.GetParse(uri)
+}
+
+func (inv *Investigate) postCategorization(domains []string, labels bool) (map[string]interface{}, error) {
+	uri := fmt.Sprintf(urls["categorization"], "")
+	body, err := json.Marshal(domains)
+
+	if err != nil {
+		inv.Logf("Error marshalling domain slice into JSON: %v", err)
+		return nil, err
+	}
+
+	return inv.PostParse(uri, bytes.NewReader(body))
 }
 
 // Use domain to make the HTTP request: /links/name/{domain}.json

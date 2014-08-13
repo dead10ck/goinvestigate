@@ -45,6 +45,34 @@ func TestRRHistory(t *testing.T) {
 	}
 }
 
+func TestCategorization(t *testing.T) {
+	catKeys := []string{"status", "content_categories", "security_categories"}
+
+	// test a single domain
+	outMap, err := inv.Categorization("www.amazon.com", false)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hasKeys(outMap, []string{"www.amazon.com"}, t)
+	hasKeys(outMap["www.amazon.com"].(map[string]interface{}), catKeys, t)
+
+	// test a list of domains with labels
+	domains := []string{"www.amazon.com", "www.opendns.com", "bibikun.ru"}
+	outMap, err = inv.Categorization(domains, true)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hasKeys(outMap, domains, t)
+
+	for _, domain := range domains {
+		hasKeys(outMap[domain].(map[string]interface{}), catKeys, t)
+	}
+}
+
 //func TestGetIps(t *testing.T) {
 //ips := []string{
 //"208.64.121.161",
