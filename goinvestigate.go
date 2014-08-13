@@ -53,6 +53,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 )
 
 const (
@@ -65,14 +66,22 @@ var maxGoroutines int = 10
 
 // format strings for API URIs
 var urls map[string]string = map[string]string{
-	"ip":            "/dnsdb/ip/a/%s.json",
-	"domain":        "/dnsdb/name/a/%s.json",
+	"ip":            "/dnsdb/ip/%s/%s.json",
+	"domain":        "/dnsdb/name/%s/%s.json",
 	"related":       "/links/name/%s.json",
 	"score":         "/label/rface-gbt/name/%s.json",
 	"cooccurrences": "/recommendations/name/%s.json",
 	"security":      "/security/name/%s.json",
 	"whois":         "/whois/name/%s.json",
 	"infected":      "/infected/names/%s.json",
+}
+
+var supportedQueryTypes map[string]int = map[string]int{
+	"A":     1,
+	"NS":    1,
+	"MX":    1,
+	"TXT":   1,
+	"CNAME": 1,
 }
 
 type Investigate struct {
@@ -117,7 +126,8 @@ func (inv *Investigate) Request(req *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
-// A generic GET call to the Investigate API. Will make an HTTP request to: https://invraph.umbrella.com{subUri}
+// A generic GET call to the Investigate API.
+// Will make an HTTP request to: https://investigate.api.opendns.com{subUri}
 func (inv *Investigate) Get(subUri string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", baseUrl+subUri, nil)
 
@@ -193,9 +203,32 @@ func (inv *Investigate) Security(domain string) (map[string]interface{}, error) 
 //return inv.pGetParse(subUris)
 //}
 
+// Get the RR (Resource Record) History of the given domain or IP, given by query.
+// The following query types are supported:
+//
+// A, NS, MX, TXT, CNAME
+//
+// For details, see https://sgraph.opendns.com/docs/api#dnsrr_domain
+func (inv *Investigate) RRHistory(query string, queryType string) (map[string]interface{}, error) {
+	// If the user tried an unsupported query type, return an error
+	if _, ok := supportedQueryTypes[queryType]; !ok {
+		return nil, errors.New("unsupported query type")
+	}
+	// if this is an IP, do an IP query
+	if match, err := regexp.MatchString(`(\d{1,3}\.){3}\d{1,3}`, query); match {
+		return inv.ipRRHistory(query, queryType)
+	} else if err != nil {
+		return nil, err
+	}
+
+	// otherwise, do a domain query
+	return inv.domainRRHistory(query, queryType)
+
+}
+
 // Use ip to make the HTTP request: /dnsdb/ip/a/{ip}.json
-func (inv *Investigate) Ip(ip string) (map[string]interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["ip"], ip))
+func (inv *Investigate) ipRRHistory(ip string, queryType string) (map[string]interface{}, error) {
+	return inv.GetParse(fmt.Sprintf(urls["ip"], queryType, ip))
 }
 
 // Call GetIp() on the given list of domains. All requests are made
@@ -207,8 +240,8 @@ func (inv *Investigate) Ip(ip string) (map[string]interface{}, error) {
 //}
 
 // Use domain to make the HTTP request: /dnsdb/name/a/{domain}.json
-func (inv *Investigate) Domain(domain string) (map[string]interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["domain"], domain))
+func (inv *Investigate) domainRRHistory(domain string, queryType string) (map[string]interface{}, error) {
+	return inv.GetParse(fmt.Sprintf(urls["domain"], queryType, domain))
 }
 
 // Call GetDomain() on the given list of domains. All requests are made

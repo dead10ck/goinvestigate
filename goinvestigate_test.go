@@ -23,12 +23,26 @@ func init() {
 	inv.SetVerbose(*verbose)
 }
 
-func TestIp(t *testing.T) {
-	outMap, err := inv.Ip("208.64.121.161")
+func TestRRHistory(t *testing.T) {
+	// test an IP
+	outMap, err := inv.RRHistory("208.64.121.161", "A")
 	if err != nil {
 		t.Fatal(err)
 	}
 	hasKeys(outMap, []string{"features", "rrs"}, t)
+
+	// test a domain
+	outMap, err = inv.RRHistory("www.test.com", "A")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hasKeys(outMap, []string{"features", "rrs_tf"}, t)
+
+	// trying an unsupported query type should return an error
+	outMap, err = inv.RRHistory("www.test.com", "AFSDB")
+	if outMap != nil || err == nil {
+		t.Fatal("Querying the wrong query type did not return an error.")
+	}
 }
 
 //func TestGetIps(t *testing.T) {
@@ -49,14 +63,6 @@ func TestIp(t *testing.T) {
 //hasKeys(result, []string{"features", "rrs"}, t)
 //}
 //}
-
-func TestDomain(t *testing.T) {
-	outMap, err := inv.Domain("www.test.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	hasKeys(outMap, []string{"features", "rrs_tf"}, t)
-}
 
 //func TestGetDomains(t *testing.T) {
 //domains := []string{
