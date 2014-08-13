@@ -140,7 +140,7 @@ func (inv *Investigate) Post(subUri string, body io.Reader) (*http.Response, err
 }
 
 // Use domain to make the HTTP request: /links/name/{domain}.json
-func (inv *Investigate) GetRelatedDomains(domain string) (map[string]interface{}, error) {
+func (inv *Investigate) RelatedDomains(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["related"], domain))
 }
 
@@ -154,7 +154,7 @@ func (inv *Investigate) GetRelatedDomains(domain string) (map[string]interface{}
 //}
 
 // Use domain to make the HTTP request: /label/rface-gbt/name/{domain}.json
-func (inv *Investigate) GetScore(domain string) (map[string]interface{}, error) {
+func (inv *Investigate) Score(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["score"], domain))
 }
 
@@ -167,7 +167,7 @@ func (inv *Investigate) GetScore(domain string) (map[string]interface{}, error) 
 //}
 
 // Use domain to make the HTTP request: /recommendations/name/{domain}.json
-func (inv *Investigate) GetCooccurrences(domain string) (map[string]interface{}, error) {
+func (inv *Investigate) Cooccurrences(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["cooccurrences"], domain))
 }
 
@@ -181,7 +181,7 @@ func (inv *Investigate) GetCooccurrences(domain string) (map[string]interface{},
 //}
 
 // Use domain to make the HTTP request: /security/name/{domain}.json
-func (inv *Investigate) GetSecurity(domain string) (map[string]interface{}, error) {
+func (inv *Investigate) Security(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["security"], domain))
 }
 
@@ -194,7 +194,7 @@ func (inv *Investigate) GetSecurity(domain string) (map[string]interface{}, erro
 //}
 
 // Use ip to make the HTTP request: /dnsdb/ip/a/{ip}.json
-func (inv *Investigate) GetIp(ip string) (map[string]interface{}, error) {
+func (inv *Investigate) Ip(ip string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["ip"], ip))
 }
 
@@ -207,7 +207,7 @@ func (inv *Investigate) GetIp(ip string) (map[string]interface{}, error) {
 //}
 
 // Use domain to make the HTTP request: /dnsdb/name/a/{domain}.json
-func (inv *Investigate) GetDomain(domain string) (map[string]interface{}, error) {
+func (inv *Investigate) Domain(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["domain"], domain))
 }
 

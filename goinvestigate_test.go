@@ -23,8 +23,8 @@ func init() {
 	inv.SetVerbose(*verbose)
 }
 
-func TestGetIp(t *testing.T) {
-	outMap, err := inv.GetIp("208.64.121.161")
+func TestIp(t *testing.T) {
+	outMap, err := inv.Ip("208.64.121.161")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,8 +50,8 @@ func TestGetIp(t *testing.T) {
 //}
 //}
 
-func TestGetDomain(t *testing.T) {
-	outMap, err := inv.GetDomain("www.test.com")
+func TestDomain(t *testing.T) {
+	outMap, err := inv.Domain("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,8 +77,8 @@ func TestGetDomain(t *testing.T) {
 //}
 //}
 
-func TestGetRelatedDomains(t *testing.T) {
-	outMap, err := inv.GetRelatedDomains("www.test.com")
+func TestRelatedDomains(t *testing.T) {
+	outMap, err := inv.RelatedDomains("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,8 +96,8 @@ func TestGetRelatedDomains(t *testing.T) {
 //}
 //}
 
-func TestGetScore(t *testing.T) {
-	outMap, err := inv.GetScore("bibikun.ru")
+func TestScore(t *testing.T) {
+	outMap, err := inv.Score("bibikun.ru")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,8 +115,8 @@ func TestGetScore(t *testing.T) {
 //}
 //}
 
-func TestGetCooccurrences(t *testing.T) {
-	outMap, err := inv.GetCooccurrences("www.test.com")
+func TestCooccurrences(t *testing.T) {
+	outMap, err := inv.Cooccurrences("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,8 +134,8 @@ func TestGetCooccurrences(t *testing.T) {
 //}
 //}
 
-func TestGetSecurity(t *testing.T) {
-	outMap, err := inv.GetSecurity("www.test.com")
+func TestSecurity(t *testing.T) {
+	outMap, err := inv.Security("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
