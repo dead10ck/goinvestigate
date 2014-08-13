@@ -2,6 +2,7 @@ package goinvestigate
 
 import (
 	"flag"
+	"log"
 	"os"
 	"testing"
 )
@@ -14,7 +15,11 @@ var (
 func init() {
 	verbose := flag.Bool("sgverbose", false, "Set SGraph output to verbose.")
 	flag.Parse()
-	inv = New(os.Getenv("INVESTIGATE_KEY"))
+	key := os.Getenv("INVESTIGATE_KEY")
+	if key == "" {
+		log.Fatal("INVESTIGATE_KEY environment variable not set")
+	}
+	inv = New(key)
 	inv.SetVerbose(*verbose)
 }
 
