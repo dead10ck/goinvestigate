@@ -1,39 +1,25 @@
-package sgraph
+package goinvestigate
 
 import (
 	"flag"
-	"log"
+	"os"
 	"testing"
-	"time"
 )
 
 var (
-	keyFile, certFile string
-	sg                *SGraph
+	key string
+	inv *Investigate
 )
 
 func init() {
-	flag.StringVar(&keyFile, "key", "", "Output matching IPs to the given file (REQUIRED)")
-	flag.StringVar(&certFile, "cert", "", "Output matching IPs to the given file (REQUIRED)")
 	verbose := flag.Bool("sgverbose", false, "Set SGraph output to verbose.")
 	flag.Parse()
-
-	if keyFile == "" || certFile == "" {
-		log.Fatal("Need cert and key file.")
-	}
-
-	var err error
-	sg, err = New(certFile, keyFile)
-
-	if err != nil {
-		log.Fatalf("Error building SGraph client: %v\n", err)
-	}
-
-	sg.SetVerbose(*verbose)
+	inv = New(os.Getenv("INVESTIGATE_KEY"))
+	inv.SetVerbose(*verbose)
 }
 
 func TestGetIp(t *testing.T) {
-	outMap, err := sg.GetIp("208.64.121.161")
+	outMap, err := inv.GetIp("208.64.121.161")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,14 +39,14 @@ func TestGetIps(t *testing.T) {
 		"119.17.168.4",
 		"119.57.72.26",
 	}
-	resultsChan := sg.GetIps(ips)
+	resultsChan := inv.GetIps(ips)
 	for result := range resultsChan {
 		hasKeys(result, []string{"features", "rrs"}, t)
 	}
 }
 
 func TestGetDomain(t *testing.T) {
-	outMap, err := sg.GetDomain("www.test.com")
+	outMap, err := inv.GetDomain("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,14 +66,14 @@ func TestGetDomains(t *testing.T) {
 		"arabstoday.com",
 		"arbokeuringen.nl",
 	}
-	resultsChan := sg.GetDomains(domains)
+	resultsChan := inv.GetDomains(domains)
 	for result := range resultsChan {
 		hasKeys(result, []string{"features", "rrs_tf"}, t)
 	}
 }
 
 func TestGetRelatedDomains(t *testing.T) {
-	outMap, err := sg.GetRelatedDomains("www.test.com")
+	outMap, err := inv.GetRelatedDomains("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,14 +85,14 @@ func TestGetRelatedDomainses(t *testing.T) {
 	domains := []string{
 		"www.test.com",
 	}
-	resultsChan := sg.GetRelatedDomainses(domains)
+	resultsChan := inv.GetRelatedDomainses(domains)
 	for result := range resultsChan {
 		hasKeys(result, []string{"found", "tb1"}, t)
 	}
 }
 
 func TestGetScore(t *testing.T) {
-	outMap, err := sg.GetScore("bibikun.ru")
+	outMap, err := inv.GetScore("bibikun.ru")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,14 +104,14 @@ func TestGetScores(t *testing.T) {
 	domains := []string{
 		"bibikun.ru",
 	}
-	resultsChan := sg.GetScores(domains)
+	resultsChan := inv.GetScores(domains)
 	for result := range resultsChan {
 		hasKeys(result, []string{"confidence", "label", "name", "path", "score", "z"}, t)
 	}
 }
 
 func TestGetCooccurrences(t *testing.T) {
-	outMap, err := sg.GetCooccurrences("www.test.com")
+	outMap, err := inv.GetCooccurrences("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,14 +123,14 @@ func TestGetCooccurrenceses(t *testing.T) {
 	domains := []string{
 		"www.test.com",
 	}
-	resultsChan := sg.GetCooccurrenceses(domains)
+	resultsChan := inv.GetCooccurrenceses(domains)
 	for result := range resultsChan {
 		hasKeys(result, []string{"found", "pfs2"}, t)
 	}
 }
 
 func TestGetSecurity(t *testing.T) {
-	outMap, err := sg.GetSecurity("www.test.com")
+	outMap, err := inv.GetSecurity("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +150,7 @@ func TestGetSecurities(t *testing.T) {
 		"10safetytips.com",
 		"adelur.org",
 	}
-	resultsChan := sg.GetSecurities(domains)
+	resultsChan := inv.GetSecurities(domains)
 	for result := range resultsChan {
 		hasKeys(result, []string{"asn_score", "crank", "dga_score", "entropy",
 			"fastflux", "found", "frequencyrank", "geodiversity", "geodiversity_normalized",
@@ -174,7 +160,7 @@ func TestGetSecurities(t *testing.T) {
 }
 
 func TestGetWhois(t *testing.T) {
-	outMap, err := sg.GetWhois("www.test.com")
+	outMap, err := inv.GetWhois("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,41 +180,10 @@ func TestGetWhoises(t *testing.T) {
 		"arabstoday.com",
 		"arbokeuringen.nl",
 	}
-	resultsChan := sg.GetWhoises(domains)
+	resultsChan := inv.GetWhoises(domains)
 	for result := range resultsChan {
 		hasKeys(result, []string{"found"}, t)
 	}
-}
-
-func TestGetInfected(t *testing.T) {
-	outMap, err := sg.GetInfected([]string{"www.test.com", "bibikun.ru"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	hasKeys(outMap, []string{"scores"}, t)
-	scores := outMap["scores"].(map[string]interface{})
-	hasKeys(scores, []string{"www.test.com", "bibikun.ru"}, t)
-
-	// do again to make sure the sipHasher resets correctly
-	outMap, err = sg.GetInfected([]string{"www.test.com", "bibikun.ru"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	hasKeys(outMap, []string{"scores"}, t)
-	scores = outMap["scores"].(map[string]interface{})
-	hasKeys(scores, []string{"www.test.com", "bibikun.ru"}, t)
-}
-
-func TestGetTraffic(t *testing.T) {
-	loc, err := time.LoadLocation("Local")
-	if err != nil {
-		log.Fatal("Failed to load location: %v", err)
-	}
-	outMap, err := sg.GetTraffic("wikileaks.org", time.Date(2013, 12, 13, 0, 0, 0, 0, loc), time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	hasKeys(outMap, []string{"elapsed", "function", "query", "response"}, t)
 }
 
 func hasKeys(data map[string]interface{}, keys []string, t *testing.T) {
