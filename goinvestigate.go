@@ -73,6 +73,7 @@ var urls map[string]string = map[string]string{
 	"cooccurrences":  "/recommendations/name/%s.json",
 	"security":       "/security/name/%s.json",
 	"tags":           "/domains/%s/latest_tags",
+	"latest_domains": "/ips/%s/latest_domains",
 }
 
 var supportedQueryTypes map[string]int = map[string]int{
@@ -259,6 +260,12 @@ func (inv *Investigate) ipRRHistory(ip string, queryType string) (interface{}, e
 // Use domain to make the HTTP request: /dnsdb/name/a/{domain}.json
 func (inv *Investigate) domainRRHistory(domain string, queryType string) (interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["domain"], queryType, domain))
+}
+
+// Gets the latest known malicious domains associated with the given
+// IP address, if any. Returns the list of malicious domains.
+func (inv *Investigate) LatestDomains(ip string) (interface{}, error) {
+	return inv.GetParse(fmt.Sprintf(urls["latest_domains"], ip))
 }
 
 // Converts the given list of items (domains or IPs)

@@ -135,6 +135,19 @@ func TestDomainTags(t *testing.T) {
 	}
 }
 
+func TestLatestDomains(t *testing.T) {
+	out, err := inv.LatestDomains("46.161.41.43")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outSlice := out.([]interface{})
+	if len(outSlice) <= 0 {
+		t.Fatal("empty list")
+	}
+}
+
 func hasKeys(data map[string]interface{}, keys []string, t *testing.T) {
 	for _, key := range keys {
 		if _, ok := data[key]; !ok {
