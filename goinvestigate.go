@@ -202,6 +202,9 @@ func (inv *Investigate) postCategorization(domains []string, labels bool) (map[s
 }
 
 // Use domain to make the HTTP request: /links/name/{domain}.json
+// Get the related domains of the given domain.
+//
+// For details, see https://sgraph.opendns.com/docs/api#relatedDomains
 func (inv *Investigate) RelatedDomains(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["related"], domain))
 }
@@ -211,12 +214,16 @@ func (inv *Investigate) Score(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["score"], domain))
 }
 
-// Use domain to make the HTTP request: /recommendations/name/{domain}.json
+// Get the cooccurrences of the given domain.
+//
+// For details, see https://sgraph.opendns.com/docs/api#co-occurrences
 func (inv *Investigate) Cooccurrences(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["cooccurrences"], domain))
 }
 
-// Use domain to make the HTTP request: /security/name/{domain}.json
+// Get the Security Information for the given domain.
+//
+// For details, see https://sgraph.opendns.com/docs/api#securityInfo
 func (inv *Investigate) Security(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["security"], domain))
 }
