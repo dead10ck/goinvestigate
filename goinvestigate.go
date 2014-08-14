@@ -209,11 +209,6 @@ func (inv *Investigate) RelatedDomains(domain string) (map[string]interface{}, e
 	return inv.GetParse(fmt.Sprintf(urls["related"], domain))
 }
 
-// Use domain to make the HTTP request: /label/rface-gbt/name/{domain}.json
-func (inv *Investigate) Score(domain string) (map[string]interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["score"], domain))
-}
-
 // Get the cooccurrences of the given domain.
 //
 // For details, see https://sgraph.opendns.com/docs/api#co-occurrences
