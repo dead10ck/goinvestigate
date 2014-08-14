@@ -70,11 +70,9 @@ var urls map[string]string = map[string]string{
 	"domain":         "/dnsdb/name/%s/%s.json",
 	"categorization": "/domains/categorization/%s",
 	"related":        "/links/name/%s.json",
-	"score":          "/label/rface-gbt/name/%s.json",
 	"cooccurrences":  "/recommendations/name/%s.json",
 	"security":       "/security/name/%s.json",
-	"whois":          "/whois/name/%s.json",
-	"infected":       "/infected/names/%s.json",
+	"tags":           "/domains/%s/latest_tags",
 }
 
 var supportedQueryTypes map[string]int = map[string]int{
@@ -221,6 +219,24 @@ func (inv *Investigate) Cooccurrences(domain string) (map[string]interface{}, er
 // For details, see https://sgraph.opendns.com/docs/api#securityInfo
 func (inv *Investigate) Security(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["security"], domain))
+}
+
+// Get the domain tagging dates for the given domain.
+//
+// For details, see https://sgraph.opendns.com/docs/api#latest_tags
+func (inv *Investigate) DomainTags(domain string) (respJson []map[string]interface{}, err error) {
+	uri := fmt.Sprintf(urls["tags"], domain)
+	resp, err := inv.Get(uri)
+
+	if err != nil {
+		inv.Log(err.Error())
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	d := json.NewDecoder(resp.Body)
+	err = d.Decode(&respJson)
+	return respJson, err
 }
 
 // Get the RR (Resource Record) History of the given domain or IP, given by query.

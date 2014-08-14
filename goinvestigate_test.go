@@ -118,6 +118,18 @@ func TestSecurity(t *testing.T) {
 	hasKeys(outMap, keys, t)
 }
 
+func TestDomainTags(t *testing.T) {
+	outSlice, err := inv.DomainTags("bibikun.ru")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tagEntry := range outSlice {
+		hasKeys(tagEntry, []string{"category", "period", "url"}, t)
+	}
+}
+
 func hasKeys(data map[string]interface{}, keys []string, t *testing.T) {
 	for _, key := range keys {
 		if _, ok := data[key]; !ok {
