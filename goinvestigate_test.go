@@ -25,22 +25,24 @@ func init() {
 
 func TestRRHistory(t *testing.T) {
 	// test an IP
-	outMap, err := inv.RRHistory("208.64.121.161", "A")
+	out, err := inv.RRHistory("208.64.121.161", "A")
 	if err != nil {
 		t.Fatal(err)
 	}
+	outMap := out.(map[string]interface{})
 	hasKeys(outMap, []string{"features", "rrs"}, t)
 
 	// test a domain
-	outMap, err = inv.RRHistory("www.test.com", "A")
+	out, err = inv.RRHistory("bibikun.ru", "A")
 	if err != nil {
 		t.Fatal(err)
 	}
+	outMap = out.(map[string]interface{})
 	hasKeys(outMap, []string{"features", "rrs_tf"}, t)
 
 	// trying an unsupported query type should return an error
-	outMap, err = inv.RRHistory("www.test.com", "AFSDB")
-	if outMap != nil || err == nil {
+	out, err = inv.RRHistory("www.test.com", "AFSDB")
+	if out != nil || err == nil {
 		t.Fatal("Querying the wrong query type did not return an error.")
 	}
 }
@@ -49,22 +51,22 @@ func TestCategorization(t *testing.T) {
 	catKeys := []string{"status", "content_categories", "security_categories"}
 
 	// test a single domain
-	outMap, err := inv.Categorization("www.amazon.com", false)
-
+	out, err := inv.Categorization("www.amazon.com", false)
 	if err != nil {
 		t.Fatal(err)
 	}
+	outMap := out.(map[string]interface{})
 
 	hasKeys(outMap, []string{"www.amazon.com"}, t)
 	hasKeys(outMap["www.amazon.com"].(map[string]interface{}), catKeys, t)
 
 	// test a list of domains with labels
 	domains := []string{"www.amazon.com", "www.opendns.com", "bibikun.ru"}
-	outMap, err = inv.Categorization(domains, true)
-
+	out, err = inv.Categorization(domains, true)
 	if err != nil {
 		t.Fatal(err)
 	}
+	outMap = out.(map[string]interface{})
 
 	hasKeys(outMap, domains, t)
 
@@ -74,26 +76,29 @@ func TestCategorization(t *testing.T) {
 }
 
 func TestRelatedDomains(t *testing.T) {
-	outMap, err := inv.RelatedDomains("www.test.com")
+	out, err := inv.RelatedDomains("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
+	outMap := out.(map[string]interface{})
 	hasKeys(outMap, []string{"found", "tb1"}, t)
 }
 
 func TestCooccurrences(t *testing.T) {
-	outMap, err := inv.Cooccurrences("www.test.com")
+	out, err := inv.Cooccurrences("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
+	outMap := out.(map[string]interface{})
 	hasKeys(outMap, []string{"found", "pfs2"}, t)
 }
 
 func TestSecurity(t *testing.T) {
-	outMap, err := inv.Security("www.test.com")
+	out, err := inv.Security("www.test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
+	outMap := out.(map[string]interface{})
 	keys := []string{
 		"dga_score",
 		"perplexity",
@@ -119,14 +124,14 @@ func TestSecurity(t *testing.T) {
 }
 
 func TestDomainTags(t *testing.T) {
-	outSlice, err := inv.DomainTags("bibikun.ru")
-
+	out, err := inv.DomainTags("bibikun.ru")
 	if err != nil {
 		t.Fatal(err)
 	}
+	outSlice := out.([]interface{})
 
 	for _, tagEntry := range outSlice {
-		hasKeys(tagEntry, []string{"category", "period", "url"}, t)
+		hasKeys(tagEntry.(map[string]interface{}), []string{"category", "period", "url"}, t)
 	}
 }
 
