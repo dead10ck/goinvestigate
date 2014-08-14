@@ -64,8 +64,6 @@ const (
 	timeLayout = "2006/01/02/15"
 )
 
-var maxGoroutines int = 10
-
 // format strings for API URIs
 var urls map[string]string = map[string]string{
 	"ip":             "/dnsdb/ip/%s/%s.json",
@@ -208,54 +206,20 @@ func (inv *Investigate) RelatedDomains(domain string) (map[string]interface{}, e
 	return inv.GetParse(fmt.Sprintf(urls["related"], domain))
 }
 
-// Call GetRelatedDomains() on the given list of domains. All requests are made
-// concurrently in the number of goroutines specified by "SetMaxGoroutines."
-// Defaults to 10. Returns the channel through which output will be sent.
-// Sorry about the awkward name. Some of these already had plural names.
-//func (inv *Investigate) GetRelatedDomainses(domains []string) <-chan map[string]interface{} {
-//subUris := convertToSubUris(domains, "related")
-//return inv.pGetParse(subUris)
-//}
-
 // Use domain to make the HTTP request: /label/rface-gbt/name/{domain}.json
 func (inv *Investigate) Score(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["score"], domain))
 }
-
-// Call GetScore() on the given list of domains. All requests are made
-// concurrently in the number of goroutines specified by "SetMaxGoroutines."
-// Defaults to 10. Returns the channel through which output will be sent.
-//func (inv *Investigate) GetScores(domains []string) <-chan map[string]interface{} {
-//subUris := convertToSubUris(domains, "score")
-//return inv.pGetParse(subUris)
-//}
 
 // Use domain to make the HTTP request: /recommendations/name/{domain}.json
 func (inv *Investigate) Cooccurrences(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["cooccurrences"], domain))
 }
 
-// Call GetCooccurrences() on the given list of domains. All requests are made
-// concurrently in the number of goroutines specified by "SetMaxGoroutines."
-// Defaults to 10. Returns the channel through which output will be sent.
-// Sorry about the awkward name. Some of these already had plural names.
-//func (inv *Investigate) GetCooccurrenceses(domains []string) <-chan map[string]interface{} {
-//subUris := convertToSubUris(domains, "cooccurrences")
-//return inv.pGetParse(subUris)
-//}
-
 // Use domain to make the HTTP request: /security/name/{domain}.json
 func (inv *Investigate) Security(domain string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["security"], domain))
 }
-
-// Call GetSecurity() on the given list of domains. All requests are made
-// concurrently in the number of goroutines specified by "SetMaxGoroutines."
-// Defaults to 10. Returns the channel through which output will be sent.
-//func (inv *Investigate) GetSecurities(domains []string) <-chan map[string]interface{} {
-//subUris := convertToSubUris(domains, "security")
-//return inv.pGetParse(subUris)
-//}
 
 // Get the RR (Resource Record) History of the given domain or IP, given by query.
 // The following query types are supported:
@@ -285,26 +249,10 @@ func (inv *Investigate) ipRRHistory(ip string, queryType string) (map[string]int
 	return inv.GetParse(fmt.Sprintf(urls["ip"], queryType, ip))
 }
 
-// Call GetIp() on the given list of domains. All requests are made
-// concurrently in the number of goroutines specified by "SetMaxGoroutines."
-// Defaults to 10. Returns the channel through which output will be sent.
-//func (inv *Investigate) GetIps(ips []string) <-chan map[string]interface{} {
-//subUris := convertToSubUris(ips, "ip")
-//return inv.pGetParse(subUris)
-//}
-
 // Use domain to make the HTTP request: /dnsdb/name/a/{domain}.json
 func (inv *Investigate) domainRRHistory(domain string, queryType string) (map[string]interface{}, error) {
 	return inv.GetParse(fmt.Sprintf(urls["domain"], queryType, domain))
 }
-
-// Call GetDomain() on the given list of domains. All requests are made
-// concurrently in the number of goroutines specified by "SetMaxGoroutines."
-// Defaults to 10. Returns the channel through which output will be sent.
-//func (inv *Investigate) GetDomains(domains []string) <-chan map[string]interface{} {
-//subUris := convertToSubUris(domains, "domain")
-//return inv.pGetParse(subUris)
-//}
 
 // Converts the given list of items (domains or IPs)
 // to a list of their appropriate URIs for the Investigate API
@@ -332,48 +280,6 @@ func (inv *Investigate) GetParse(subUri string) (map[string]interface{}, error) 
 	}
 
 	return body, err
-}
-
-// worker goroutine for parallel GetParse
-func (inv *Investigate) doPGetParse(inChan chan string, outChan chan map[string]interface{}, done chan int) {
-	for uri := range inChan {
-		outVal, err := inv.GetParse(uri)
-		if err != nil {
-			outChan <- outVal
-		}
-	}
-	done <- 1
-}
-
-// parallelized getparse.
-func (inv *Investigate) pGetParse(subUris []string) <-chan map[string]interface{} {
-	outChan := make(chan map[string]interface{}, len(subUris))
-	inChan := make(chan string, len(subUris))
-	done := make(chan int, maxGoroutines)
-
-	// populate the input channel with the provided list
-	go func() {
-		for _, uri := range subUris {
-			inChan <- uri
-		}
-		close(inChan)
-	}()
-
-	// launch the workers
-	for i := 0; i < maxGoroutines; i++ {
-		go inv.doPGetParse(inChan, outChan, done)
-	}
-
-	// launch a single goroutine which waits for all the goroutines to finish
-	go func() {
-		for i := 0; i < maxGoroutines; i++ {
-			<-done
-		}
-		// once they are all finished, close the output channel
-		close(outChan)
-	}()
-
-	return outChan
 }
 
 //convenience function to perform Post and parse the response body
@@ -419,10 +325,4 @@ func (inv *Investigate) Logf(fs string, args ...interface{}) {
 // Sets verbose messages to the given boolean value.
 func (inv *Investigate) SetVerbose(verbose bool) {
 	inv.verbose = verbose
-}
-
-// Sets the maximum number of goroutines to run bulk requests
-// Default is 10
-func (inv *Investigate) SetMaxGoroutines(n int) {
-	maxGoroutines = n
 }
