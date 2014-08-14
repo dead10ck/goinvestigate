@@ -3,7 +3,8 @@ API for the OpenDNS Security Graph / Investigate.
 
 To use it, use your Investigate API key to build an Investigate object.
 
-	inv, err := goinvestigate.New(certFile, keyFile)
+	key := "f29be9cc-f833-4a9a-b984-19dc4d5186ac"
+	inv, err := goinvestigate.New(key)
 
 	if err != nil {
 		log.Fatal(err)
@@ -12,34 +13,10 @@ To use it, use your Investigate API key to build an Investigate object.
 Then you can call any API method, e.g.:
 	data, err := inv.RRHistory("www.test.com")
 which returns the map:
-	UPDATE ME
 	map[	rrs_tf:[map[first_seen:2014-02-18 last_seen:2014-05-20
 			rrs:[map[name:www.test.com. ttl:3600 class:IN type:CNAME rr:test.blockdos.com.]]]]
 		features:map[cname:true base_domain:test.com]
 	]
-
-Most API methods also come with a sibling method that acts on lists of input, and
-it will do them concurrently. For instance, you can call GetIp() on a list of IPs
-by using GetIps(). It will call GetIp() on every domain in the input list concurrently.
-	ips := []string{
-		"208.64.121.161",
-		"108.59.1.5",
-		"37.205.198.162",
-		"176.215.86.120",
-		"203.121.165.16",
-		"211.151.57.196",
-		"109.123.83.130",
-		"141.101.117.230",
-		"119.17.168.4",
-		"119.57.72.26",
-	}
-	resultsChan := inv.GetIps(ips)
-	for result := range resultsChan {
-		// do something with result
-	}
-However, any requests which return an error are discarded. If this is not desireable,
-it is necessary to implement concurrency in your application.
-
 Be sure to set runtime.GOMAXPROCS() in the init() function of your program to enable
 concurrency.
 */
@@ -91,9 +68,7 @@ type Investigate struct {
 	verbose bool
 }
 
-// Build a new Investigate client using certFile and keyFile.
-// If there is an error, returns a nil *Investigate and the error.
-// Otherwise, returns a new *Investigate client and a nil error.
+// Build a new Investigate client using an Investigate API key.
 func New(key string) *Investigate {
 	return &Investigate{
 		&http.Client{},
@@ -103,7 +78,8 @@ func New(key string) *Investigate {
 	}
 }
 
-// A generic Request method which makes the given request
+// A generic Request method which makes the given request.
+// Will retry up to 5 times on failure.
 func (inv *Investigate) Request(req *http.Request) (*http.Response, error) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", inv.key))
 	resp := new(http.Response)
@@ -249,7 +225,6 @@ func (inv *Investigate) RRHistory(query string, queryType string) (interface{}, 
 
 	// otherwise, do a domain query
 	return inv.domainRRHistory(query, queryType)
-
 }
 
 // Use ip to make the HTTP request: /dnsdb/ip/a/{ip}.json
