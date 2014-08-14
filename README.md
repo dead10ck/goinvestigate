@@ -1,3 +1,4 @@
+[![GoDoc](https://godoc.org/github.com/dead10ck/goinvestigate?status.svg)](https://godoc.org/github.com/dead10ck/goinvestigate)
 goinvestigate
 ======
 
@@ -9,7 +10,7 @@ First, make sure your [`$GOPATH`](http://golang.org/doc/code.html#GOPATH) is set
 `go get github.com/dead10ck/goinvestigate`
 
 ## Docs
-To view the docs, just start a local godoc server:
+Click the GoDoc link above, or to view locally, just start a local godoc server:
 
 ```
 godoc -http=:6060
