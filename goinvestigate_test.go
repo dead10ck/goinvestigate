@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"strconv"
 	"testing"
 )
 
@@ -60,6 +61,27 @@ func TestCategorization(t *testing.T) {
 	hasKeys(outMap, []string{"www.amazon.com"}, t)
 	hasKeys(outMap["www.amazon.com"].(map[string]interface{}), catKeys, t)
 
+	// test a domain with labels
+	out, err = inv.Categorization("www.amazon.com", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outMap = out.(map[string]interface{})
+
+	hasKeys(outMap, []string{"www.amazon.com"}, t)
+	amzMap := outMap["www.amazon.com"].(map[string]interface{})
+	hasKeys(amzMap, catKeys, t)
+
+	// make sure the categories were given back in human-readable form
+	categorySlice := amzMap["content_categories"].([]interface{})
+	for _, cat := range categorySlice {
+		catString := cat.(string)
+		_, err := strconv.ParseInt(catString, 10, 64)
+		if err == nil {
+			t.Fatal("Did not convert category to human-readable form.")
+		}
+	}
+
 	// test a list of domains with labels
 	domains := []string{"www.amazon.com", "www.opendns.com", "bibikun.ru"}
 	out, err = inv.Categorization(domains, true)
@@ -67,9 +89,7 @@ func TestCategorization(t *testing.T) {
 		t.Fatal(err)
 	}
 	outMap = out.(map[string]interface{})
-
 	hasKeys(outMap, domains, t)
-
 	for _, domain := range domains {
 		hasKeys(outMap[domain].(map[string]interface{}), catKeys, t)
 	}

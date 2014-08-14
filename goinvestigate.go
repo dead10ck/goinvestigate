@@ -165,7 +165,7 @@ func (inv *Investigate) getCategorization(domain string, labels bool) (interface
 }
 
 func (inv *Investigate) postCategorization(domains []string, labels bool) (interface{}, error) {
-	uri := fmt.Sprintf(urls["categorization"], "")
+	uri := catUri("", labels)
 	body, err := json.Marshal(domains)
 
 	if err != nil {
