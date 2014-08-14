@@ -156,13 +156,12 @@ func TestDomainTags(t *testing.T) {
 }
 
 func TestLatestDomains(t *testing.T) {
-	out, err := inv.LatestDomains("46.161.41.43")
+	outSlice, err := inv.LatestDomains("46.161.41.43")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	outSlice := out.([]interface{})
 	if len(outSlice) <= 0 {
 		t.Fatal("empty list")
 	}

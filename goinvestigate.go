@@ -237,10 +237,45 @@ func (inv *Investigate) domainRRHistory(domain string, queryType string) (interf
 	return inv.GetParse(fmt.Sprintf(urls["domain"], queryType, domain))
 }
 
+func extractDomains(ldResp interface{}) ([]string, error) {
+	malfResp := errors.New("Malformed response.")
+	respList, ok := ldResp.([]interface{})
+
+	if !ok {
+		return nil, malfResp
+	}
+
+	var domainList []string
+	for _, entry := range respList {
+		entryMap, ok := entry.(map[string]interface{})
+		if !ok {
+			return nil, malfResp
+		}
+		if domain, ok := entryMap["name"].(string); !ok {
+			return nil, malfResp
+		} else {
+			domainList = append(domainList, domain)
+		}
+	}
+	return domainList, nil
+}
+
 // Gets the latest known malicious domains associated with the given
 // IP address, if any. Returns the list of malicious domains.
-func (inv *Investigate) LatestDomains(ip string) (interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["latest_domains"], ip))
+//
+// For details, see https://sgraph.opendns.com/docs/api#latest_domains
+func (inv *Investigate) LatestDomains(ip string) ([]string, error) {
+	resp, err := inv.GetParse(fmt.Sprintf(urls["latest_domains"], ip))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if domainList, err := extractDomains(resp); err != nil {
+		return nil, err
+	} else {
+		return domainList, nil
+	}
 }
 
 // Converts the given list of items (domains or IPs)
