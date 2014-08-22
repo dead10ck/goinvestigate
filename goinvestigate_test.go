@@ -2,9 +2,9 @@ package goinvestigate
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"testing"
 )
 
@@ -24,74 +24,125 @@ func init() {
 	inv.SetVerbose(*verbose)
 }
 
-func TestRRHistory(t *testing.T) {
-	// test an IP
-	out, err := inv.RRHistory("208.64.121.161", "A")
+func TestIPRRHistory(t *testing.T) {
+	out, err := inv.IpRRHistory("208.64.121.161", "A")
 	if err != nil {
 		t.Fatal(err)
 	}
-	outMap := out.(map[string]interface{})
-	hasKeys(outMap, []string{"features", "rrs"}, t)
+
+	if len(out.RRs) <= 0 {
+		t.Fatal("RRs should not be empty")
+	}
+
+	if out.RRFeatures == (IPResourceRecordFeatures{}) {
+		t.Fatal("empty features")
+	}
 
 	// test a domain
-	out, err = inv.RRHistory("bibikun.ru", "A")
+	//out, err = inv.RRHistory("bibikun.ru", "A")
+	//if err != nil {
+	//t.Fatal(err)
+	//}
+	//outMap = out.(map[string]interface{})
+	//hasKeys(outMap, []string{"features", "rrs_tf"}, t)
+
+	// trying an unsupported query type should return an error
+	//out, err = inv.RRHistory("www.test.com", "AFSDB")
+	//if out != nil || err == nil {
+	//t.Fatal("Querying the wrong query type did not return an error.")
+	//}
+}
+
+func TestDomainRRHistory(t *testing.T) {
+	out, err := inv.DomainRRHistory("bibikun.ru", "A")
 	if err != nil {
 		t.Fatal(err)
 	}
-	outMap = out.(map[string]interface{})
-	hasKeys(outMap, []string{"features", "rrs_tf"}, t)
 
-	// trying an unsupported query type should return an error
-	out, err = inv.RRHistory("www.test.com", "AFSDB")
-	if out != nil || err == nil {
-		t.Fatal("Querying the wrong query type did not return an error.")
+	if len(out.RRPeriods) <= 0 {
+		t.Fatal("RRPeriods should not be empty")
 	}
+
+	// can't compare hard-coded expected values, since the scores
+	// change over time
+	//if out.RRFeatures == (DomainResourceRecordFeatures{}) {
+	//t.Fatal("empty features")
+	//}
 }
 
 func TestCategorization(t *testing.T) {
-	catKeys := []string{"status", "content_categories", "security_categories"}
-
-	// test a single domain
 	out, err := inv.Categorization("www.amazon.com", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	outMap := out.(map[string]interface{})
 
-	hasKeys(outMap, []string{"www.amazon.com"}, t)
-	hasKeys(outMap["www.amazon.com"].(map[string]interface{}), catKeys, t)
+	ref := &DomainCategorization{
+		Status:             1,
+		ContentCategories:  []string{"8"},
+		SecurityCategories: []string{},
+	}
 
-	// test a domain with labels
+	if out.Status != ref.Status ||
+		out.ContentCategories[0] != ref.ContentCategories[0] ||
+		len(out.SecurityCategories) != 0 {
+		t.Fatalf("%v should be %v", out, ref)
+	}
+
 	out, err = inv.Categorization("www.amazon.com", true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	outMap = out.(map[string]interface{})
-
-	hasKeys(outMap, []string{"www.amazon.com"}, t)
-	amzMap := outMap["www.amazon.com"].(map[string]interface{})
-	hasKeys(amzMap, catKeys, t)
-
-	// make sure the categories were given back in human-readable form
-	categorySlice := amzMap["content_categories"].([]interface{})
-	for _, cat := range categorySlice {
-		catString := cat.(string)
-		_, err := strconv.ParseInt(catString, 10, 64)
-		if err == nil {
-			t.Fatal("Did not convert category to human-readable form.")
-		}
+	ref = &DomainCategorization{
+		Status:             1,
+		ContentCategories:  []string{"Ecommerce/Shopping"},
+		SecurityCategories: []string{},
 	}
 
-	// test a list of domains with labels
+	if out.Status != ref.Status ||
+		out.ContentCategories[0] != ref.ContentCategories[0] ||
+		len(out.SecurityCategories) != 0 {
+		t.Fatalf("%v should be %v", out, ref)
+	}
+}
+
+func TestCategorizations(t *testing.T) {
 	domains := []string{"www.amazon.com", "www.opendns.com", "bibikun.ru"}
-	out, err = inv.Categorization(domains, true)
+	out, err := inv.Categorizations(domains, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	outMap = out.(map[string]interface{})
-	hasKeys(outMap, domains, t)
-	for _, domain := range domains {
-		hasKeys(outMap[domain].(map[string]interface{}), catKeys, t)
+
+	ref := map[string]DomainCategorization{
+		"www.amazon.com": DomainCategorization{
+			Status:             1,
+			ContentCategories:  []string{"Ecommerce/Shopping"},
+			SecurityCategories: []string{},
+		},
+		"www.opendns.com": DomainCategorization{
+			Status:             1,
+			ContentCategories:  []string{},
+			SecurityCategories: []string{},
+		},
+		"bibikun.ru": DomainCategorization{
+			Status:             -1,
+			ContentCategories:  []string{},
+			SecurityCategories: []string{"Malware"},
+		},
+	}
+
+	if out["www.amazon.com"].Status != ref["www.amazon.com"].Status ||
+		out["www.amazon.com"].ContentCategories[0] != ref["www.amazon.com"].ContentCategories[0] ||
+		len(out["www.amazon.com"].SecurityCategories) != 0 {
+		t.Fatalf("%v should be %v", out, ref)
+	}
+
+	if out["www.opendns.com"].Status != ref["www.opendns.com"].Status ||
+		len(out["www.opendns.com"].ContentCategories) != 0 ||
+		len(out["www.opendns.com"].SecurityCategories) != 0 {
+		t.Fatalf("%v should be %v", out, ref)
+	}
+
+	if out["bibikun.ru"].Status != ref["bibikun.ru"].Status ||
+		out["bibikun.ru"].SecurityCategories[0] != ref["bibikun.ru"].SecurityCategories[0] ||
+		len(out["bibikun.ru"].ContentCategories) != 0 {
+		t.Fatalf("%v should be %v", out, ref)
 	}
 }
 
@@ -100,8 +151,9 @@ func TestRelatedDomains(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	outMap := out.(map[string]interface{})
-	hasKeys(outMap, []string{"found", "tb1"}, t)
+	if len(out) <= 0 {
+		t.Fatal(fmt.Sprintf("%v should not be empty", out))
+	}
 }
 
 func TestCooccurrences(t *testing.T) {
@@ -109,8 +161,9 @@ func TestCooccurrences(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	outMap := out.(map[string]interface{})
-	hasKeys(outMap, []string{"found", "pfs2"}, t)
+	if len(out) <= 0 {
+		t.Fatal(fmt.Sprintf("%v should not be empty", out))
+	}
 }
 
 func TestSecurity(t *testing.T) {
@@ -118,29 +171,9 @@ func TestSecurity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	outMap := out.(map[string]interface{})
-	keys := []string{
-		"dga_score",
-		"perplexity",
-		"entropy",
-		"securerank2",
-		"pagerank",
-		"asn_score",
-		"prefix_score",
-		"rip_score",
-		"fastflux",
-		"popularity",
-		"geodiversity",
-		"geodiversity_normalized",
-		"tld_geodiversity",
-		"geoscore",
-		"ks_test",
-		"handlings",
-		"attack",
-		"threat_type",
-		"found",
+	if out == nil {
+		t.Fatalf("response object was nil")
 	}
-	hasKeys(outMap, keys, t)
 }
 
 func TestDomainTags(t *testing.T) {
@@ -148,10 +181,8 @@ func TestDomainTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	outSlice := out.([]interface{})
-
-	for _, tagEntry := range outSlice {
-		hasKeys(tagEntry.(map[string]interface{}), []string{"category", "period", "url"}, t)
+	if len(out) <= 0 {
+		t.Fatal(fmt.Sprintf("%v should not be empty"), out)
 	}
 }
 
@@ -164,14 +195,5 @@ func TestLatestDomains(t *testing.T) {
 
 	if len(outSlice) <= 0 {
 		t.Fatal("empty list")
-	}
-}
-
-func hasKeys(data map[string]interface{}, keys []string, t *testing.T) {
-	for _, key := range keys {
-		if _, ok := data[key]; !ok {
-			t.Errorf("data is missing key: %v\ndata: %v\n", key, data)
-			t.Fail()
-		}
 	}
 }

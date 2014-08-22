@@ -233,7 +233,6 @@ func TestUnmarshalSecurityFeatures(t *testing.T) {
 		!geoFeaturesEq(testSecF.TLDGeodiversity, refSecF.TLDGeodiversity) ||
 		testSecF.Geoscore != refSecF.Geoscore ||
 		testSecF.KSTest != refSecF.KSTest ||
-		testSecF.Handlings != refSecF.Handlings ||
 		testSecF.Attack != refSecF.Attack ||
 		testSecF.ThreatType != refSecF.ThreatType {
 		t.Fatalf("%v != %v", refSecF, testSecF)
