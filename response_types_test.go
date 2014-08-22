@@ -55,15 +55,13 @@ func TestUnmarshallCooccurrenceList(t *testing.T) {
 	)
 
 	refCl := CooccurrenceList{
-		Cooccurrences: []Cooccurrence{
-			Cooccurrence{
-				Domain: "download.example.com",
-				Score:  0.9320288065469468,
-			},
-			Cooccurrence{
-				Domain: "query.example.com",
-				Score:  0.06797119345305325,
-			},
+		Cooccurrence{
+			Domain: "download.example.com",
+			Score:  0.9320288065469468,
+		},
+		Cooccurrence{
+			Domain: "query.example.com",
+			Score:  0.06797119345305325,
 		},
 	}
 
@@ -74,12 +72,12 @@ func TestUnmarshallCooccurrenceList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(testCl.Cooccurrences) != len(refCl.Cooccurrences) {
+	if len(testCl) != len(refCl) {
 		t.Fatalf("%v != %v", testCl, refCl)
 	}
 
-	for i := range testCl.Cooccurrences {
-		if testCl.Cooccurrences[i] != refCl.Cooccurrences[i] {
+	for i := range testCl {
+		if testCl[i] != refCl[i] {
 			t.Fatalf("%v != %v", testCl, refCl)
 		}
 	}

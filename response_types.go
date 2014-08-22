@@ -17,55 +17,55 @@ type Cooccurrence struct {
 	Score  float64
 }
 
-type CooccurrenceList struct {
-	Cooccurrences []Cooccurrence `json:"pfs2"`
-}
+type CooccurrenceList []Cooccurrence
 
 func (r *CooccurrenceList) UnmarshalJSON(b []byte) error {
 	var raw map[string]interface{}
-	cl := new(CooccurrenceList)
 	err := json.Unmarshal(b, &raw)
-
 	if err != nil {
 		return err
 	}
-
 	malfErr := errors.New(fmt.Sprintf("malformed object: %v", raw))
-	coocList, ok := raw["pfs2"]
+	pfs2, ok := raw["pfs2"]
 
 	// empty list
 	if !ok {
-		*r = CooccurrenceList{[]Cooccurrence{}}
+		*r = CooccurrenceList{}
 		return nil
 	}
 
-	coocs, ok := coocList.([]interface{})
+	pfs2List, ok := pfs2.([]interface{})
 	if !ok {
-		return malfErr
+		return errors.New("Could not convert pfs2List to []interface{}")
 	}
 
-	for _, c := range coocs {
-		if double, ok := c.([]interface{}); !ok {
+	*r = make([]Cooccurrence, len(pfs2List))
+	for i, item := range pfs2List {
+		// convert the entry into its double list
+		itemList, ok := item.([]interface{})
+		if !ok {
+			r = nil
+			return errors.New("Could not convert item to []interface{}")
+		}
+
+		// extract the domain and score
+		d, ok := itemList[0].(string)
+		if !ok {
+			r = nil
 			return malfErr
-		} else {
-			var d string
-			var s float64
-			d, ok := double[0].(string)
-			if !ok {
-				return malfErr
-			}
-			s, ok = double[1].(float64)
-			if !ok {
-				return malfErr
-			}
-			cl.Cooccurrences = append(cl.Cooccurrences, Cooccurrence{
-				Domain: d,
-				Score:  s,
-			})
+		}
+		s, ok := itemList[1].(float64)
+		if !ok {
+			r = nil
+			return malfErr
+		}
+
+		// put the domain into the list
+		(*r)[i] = Cooccurrence{
+			Domain: d,
+			Score:  s,
 		}
 	}
-
-	*r = *cl
 	return nil
 }
 
@@ -87,7 +87,8 @@ func (r *RelatedDomainList) UnmarshalJSON(b []byte) error {
 
 	// empty list
 	if !ok {
-		*r = []RelatedDomain{}
+		*r = RelatedDomainList{}
+		return nil
 	}
 
 	tb1List, ok := tb1.([]interface{})

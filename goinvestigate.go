@@ -203,7 +203,7 @@ func (inv *Investigate) Cooccurrences(domain string) ([]Cooccurrence, error) {
 	if err != nil {
 		return nil, err
 	}
-	return resp.Cooccurrences, nil
+	return resp, nil
 }
 
 // Get the Security Information for the given domain.
