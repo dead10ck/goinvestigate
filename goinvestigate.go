@@ -11,14 +11,14 @@ To use it, use your Investigate API key to build an Investigate object.
 	}
 
 Then you can call any API method, e.g.:
-	data, err := inv.RRHistory("www.test.com")
-which returns the map:
-	map[	rrs_tf:[map[first_seen:2014-02-18 last_seen:2014-05-20
-			rrs:[map[name:www.test.com. ttl:3600 class:IN type:CNAME rr:test.blockdos.com.]]]]
-		features:map[cname:true base_domain:test.com]
-	]
+	data, err := inv.DomainRRHistory("www.test.com")
+which returns a DomainRRHistory object.
+
 Be sure to set runtime.GOMAXPROCS() in the init() function of your program to enable
 concurrency.
+
+The official OpenDNS Investigate Documentation can be found at:
+https://sgraph.opendns.com/docs/api
 */
 package goinvestigate
 
