@@ -37,20 +37,6 @@ func TestIPRRHistory(t *testing.T) {
 	if out.RRFeatures == (IPResourceRecordFeatures{}) {
 		t.Fatal("empty features")
 	}
-
-	// test a domain
-	//out, err = inv.RRHistory("bibikun.ru", "A")
-	//if err != nil {
-	//t.Fatal(err)
-	//}
-	//outMap = out.(map[string]interface{})
-	//hasKeys(outMap, []string{"features", "rrs_tf"}, t)
-
-	// trying an unsupported query type should return an error
-	//out, err = inv.RRHistory("www.test.com", "AFSDB")
-	//if out != nil || err == nil {
-	//t.Fatal("Querying the wrong query type did not return an error.")
-	//}
 }
 
 func TestDomainRRHistory(t *testing.T) {
