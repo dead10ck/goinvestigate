@@ -31,8 +31,15 @@ func (r *CooccurrenceList) UnmarshalJSON(b []byte) error {
 	}
 
 	malfErr := errors.New(fmt.Sprintf("malformed object: %v", raw))
-	coocs, ok := raw["pfs2"].([]interface{})
+	coocList, ok := raw["pfs2"]
 
+	// empty list
+	if !ok {
+		*r = CooccurrenceList{[]Cooccurrence{}}
+		return nil
+	}
+
+	coocs, ok := coocList.([]interface{})
 	if !ok {
 		return malfErr
 	}
@@ -81,7 +88,16 @@ func (r *RelatedDomainList) UnmarshalJSON(b []byte) error {
 	}
 
 	malfErr := errors.New(fmt.Sprintf("malformed object: %v", raw))
-	rds, ok := raw["tb1"].([]interface{})
+
+	rdList, ok := raw["tb1"]
+
+	// empty list
+	if !ok {
+		*r = RelatedDomainList{[]RelatedDomain{}}
+		return nil
+	}
+
+	rds, ok := rdList.([]interface{})
 
 	if !ok {
 		return malfErr
@@ -163,7 +179,6 @@ type SecurityFeatures struct {
 	TLDGeodiversity        []GeoFeatures `json:"tld_geodiversity"`
 	Geoscore               float64
 	KSTest                 float64 `json:"ks_test"`
-	Handlings              string
 	Attack                 string
 	ThreatType             string `json:"threat_type"`
 }
