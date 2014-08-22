@@ -241,3 +241,8 @@ type IPRRHistory struct {
 	RRs        []ResourceRecord
 	RRFeatures IPResourceRecordFeatures `json:"features"`
 }
+
+type MaliciousDomain struct {
+	Domain string `json:"name"`
+	Id     int
+}

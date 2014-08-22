@@ -517,6 +517,48 @@ func TestUnmarshalIPRRHistory(t *testing.T) {
 	}
 }
 
+func TestUnmarshalMaliciousDomain(t *testing.T) {
+	data := []byte(
+		`[
+  {
+    "id": 22842894,
+    "name": "www.cxhyly.com"
+  },
+  {
+    "id": 22958747,
+    "name": "cxhyly.com"
+  }
+]`,
+	)
+
+	ref := []MaliciousDomain{
+		MaliciousDomain{
+			Domain: "www.cxhyly.com",
+			Id:     22842894,
+		},
+		MaliciousDomain{
+			Domain: "cxhyly.com",
+			Id:     22958747,
+		},
+	}
+
+	var test []MaliciousDomain
+	err := json.Unmarshal(data, &test)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(ref) != len(test) {
+		t.Fatalf("%v != %v", ref, test)
+	}
+
+	for i := range ref {
+		if ref[i] != test[i] {
+			t.Fatalf("%v != %v", ref, test)
+		}
+	}
+}
+
 func locationSliceEq(a []Location, b []Location) bool {
 	if len(a) != len(b) {
 		return false
