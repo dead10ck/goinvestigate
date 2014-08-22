@@ -74,57 +74,54 @@ type RelatedDomain struct {
 	Score  int
 }
 
-type RelatedDomainList struct {
-	RelatedDomains []RelatedDomain `json:"tb1"`
-}
+type RelatedDomainList []RelatedDomain
 
 func (r *RelatedDomainList) UnmarshalJSON(b []byte) error {
 	var raw map[string]interface{}
-	rl := new(RelatedDomainList)
 	err := json.Unmarshal(b, &raw)
-
 	if err != nil {
 		return err
 	}
-
 	malfErr := errors.New(fmt.Sprintf("malformed object: %v", raw))
-
-	rdList, ok := raw["tb1"]
+	tb1, ok := raw["tb1"]
 
 	// empty list
 	if !ok {
-		*r = RelatedDomainList{[]RelatedDomain{}}
-		return nil
+		*r = []RelatedDomain{}
 	}
 
-	rds, ok := rdList.([]interface{})
-
+	tb1List, ok := tb1.([]interface{})
 	if !ok {
-		return malfErr
+		return errors.New("Could not convert tb1List to []interface{}")
 	}
 
-	for _, r := range rds {
-		if double, ok := r.([]interface{}); !ok {
+	*r = make([]RelatedDomain, len(tb1List))
+	for i, item := range tb1List {
+		// convert the entry into its double list
+		itemList, ok := item.([]interface{})
+		if !ok {
+			r = nil
+			return errors.New("Could not convert item to []interface{}")
+		}
+
+		// extract the domain and score
+		d, ok := itemList[0].(string)
+		if !ok {
+			r = nil
 			return malfErr
-		} else {
-			var d string
-			var s float64
-			d, ok := double[0].(string)
-			if !ok {
-				return errors.New("Could not convert double[0] to string")
-			}
-			s, ok = double[1].(float64)
-			if !ok {
-				return errors.New("Could not convert double[1] to int")
-			}
-			rl.RelatedDomains = append(rl.RelatedDomains, RelatedDomain{
-				Domain: d,
-				Score:  int(s),
-			})
+		}
+		s, ok := itemList[1].(float64)
+		if !ok {
+			r = nil
+			return malfErr
+		}
+
+		// put the domain into the list
+		(*r)[i] = RelatedDomain{
+			Domain: d,
+			Score:  int(s),
 		}
 	}
-
-	*r = *rl
 	return nil
 }
 

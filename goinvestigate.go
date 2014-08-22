@@ -191,7 +191,7 @@ func (inv *Investigate) RelatedDomains(domain string) ([]RelatedDomain, error) {
 	if err != nil {
 		return nil, err
 	}
-	return resp.RelatedDomains, nil
+	return resp, nil
 }
 
 // Get the cooccurrences of the given domain.

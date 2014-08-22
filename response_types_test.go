@@ -107,19 +107,17 @@ func TestUnmarshallRelatedDomainList(t *testing.T) {
 	)
 
 	refRdl := RelatedDomainList{
-		RelatedDomains: []RelatedDomain{
-			RelatedDomain{
-				Domain: "www.example1.com",
-				Score:  10,
-			},
-			RelatedDomain{
-				Domain: "info.example2.com.com",
-				Score:  9,
-			},
-			RelatedDomain{
-				Domain: "support.example.com",
-				Score:  3,
-			},
+		RelatedDomain{
+			Domain: "www.example1.com",
+			Score:  10,
+		},
+		RelatedDomain{
+			Domain: "info.example2.com.com",
+			Score:  9,
+		},
+		RelatedDomain{
+			Domain: "support.example.com",
+			Score:  3,
 		},
 	}
 
@@ -130,12 +128,12 @@ func TestUnmarshallRelatedDomainList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(testRdl.RelatedDomains) != len(refRdl.RelatedDomains) {
+	if len(testRdl) != len(refRdl) {
 		t.Fatalf("%v != %v", testRdl, refRdl)
 	}
 
-	for i := range testRdl.RelatedDomains {
-		if testRdl.RelatedDomains[i] != refRdl.RelatedDomains[i] {
+	for i := range testRdl {
+		if testRdl[i] != refRdl[i] {
 			t.Fatalf("%v != %v", testRdl, refRdl)
 		}
 	}
