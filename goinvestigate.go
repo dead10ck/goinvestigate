@@ -11,14 +11,14 @@ To use it, use your Investigate API key to build an Investigate object.
 	}
 
 Then you can call any API method, e.g.:
-	data, err := inv.RRHistory("www.test.com")
-which returns the map:
-	map[	rrs_tf:[map[first_seen:2014-02-18 last_seen:2014-05-20
-			rrs:[map[name:www.test.com. ttl:3600 class:IN type:CNAME rr:test.blockdos.com.]]]]
-		features:map[cname:true base_domain:test.com]
-	]
+	data, err := inv.DomainRRHistory("www.test.com")
+which returns a DomainRRHistory object.
+
 Be sure to set runtime.GOMAXPROCS() in the init() function of your program to enable
 concurrency.
+
+The official OpenDNS Investigate Documentation can be found at:
+https://sgraph.opendns.com/docs/api
 */
 package goinvestigate
 
@@ -32,7 +32,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 )
 
 const (
@@ -125,23 +124,6 @@ func (inv *Investigate) Post(subUri string, body io.Reader) (*http.Response, err
 	return inv.Request(req)
 }
 
-// Get the domain status and categorization of a domain or list of domains.
-// 'domains' can be either a single domain, or a list of domains.
-// Setting 'labels' to true will give back categorizations in human-readable form.
-//
-// For more detail, see https://sgraph.opendns.com/docs/api#categorization
-func (inv *Investigate) Categorization(domains interface{}, labels bool) (interface{}, error) {
-	switch d := domains.(type) {
-	case string:
-		return inv.getCategorization(d, labels)
-	case []string:
-		return inv.postCategorization(d, labels)
-	default:
-		return nil, errors.New(
-			"domains must be either a string, or a list of strings")
-	}
-}
-
 func catUri(domain string, labels bool) string {
 	uri, err := url.Parse(fmt.Sprintf(urls["categorization"], domain))
 
@@ -159,12 +141,29 @@ func catUri(domain string, labels bool) string {
 	return uri.String()
 }
 
-func (inv *Investigate) getCategorization(domain string, labels bool) (interface{}, error) {
+// Get the domain status and categorization of a domain.
+// Setting 'labels' to true will give back categorizations in human-readable form.
+//
+// For more detail, see https://sgraph.opendns.com/docs/api#categorization
+func (inv *Investigate) Categorization(domain string, labels bool) (*DomainCategorization, error) {
 	uri := catUri(domain, labels)
-	return inv.GetParse(uri)
+	resp := make(map[string]DomainCategorization)
+	err := inv.GetParse(uri, resp)
+	if err != nil {
+		return nil, err
+	}
+	if cat, ok := resp[domain]; !ok {
+		return nil, errors.New("received a malformed response body")
+	} else {
+		return &cat, nil
+	}
 }
 
-func (inv *Investigate) postCategorization(domains []string, labels bool) (interface{}, error) {
+// Get the status and categorization of a list of domains
+// Setting 'labels' to true will give back categorizations in human-readable form.
+//
+// For more detail, see https://sgraph.opendns.com/docs/api#categorization
+func (inv *Investigate) Categorizations(domains []string, labels bool) (map[string]DomainCategorization, error) {
 	uri := catUri("", labels)
 	body, err := json.Marshal(domains)
 
@@ -173,91 +172,115 @@ func (inv *Investigate) postCategorization(domains []string, labels bool) (inter
 		return nil, err
 	}
 
-	return inv.PostParse(uri, bytes.NewReader(body))
+	resp := make(map[string]DomainCategorization)
+	err = inv.PostParse(uri, bytes.NewReader(body), resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // Use domain to make the HTTP request: /links/name/{domain}.json
 // Get the related domains of the given domain.
 //
 // For details, see https://sgraph.opendns.com/docs/api#relatedDomains
-func (inv *Investigate) RelatedDomains(domain string) (interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["related"], domain))
+func (inv *Investigate) RelatedDomains(domain string) ([]RelatedDomain, error) {
+	var resp RelatedDomainList
+	err := inv.GetParse(fmt.Sprintf(urls["related"], domain), &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 // Get the cooccurrences of the given domain.
 //
 // For details, see https://sgraph.opendns.com/docs/api#co-occurrences
-func (inv *Investigate) Cooccurrences(domain string) (interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["cooccurrences"], domain))
+func (inv *Investigate) Cooccurrences(domain string) ([]Cooccurrence, error) {
+	var resp CooccurrenceList
+	err := inv.GetParse(fmt.Sprintf(urls["cooccurrences"], domain), &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 // Get the Security Information for the given domain.
 //
 // For details, see https://sgraph.opendns.com/docs/api#securityInfo
-func (inv *Investigate) Security(domain string) (interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["security"], domain))
+func (inv *Investigate) Security(domain string) (*SecurityFeatures, error) {
+	resp := new(SecurityFeatures)
+	err := inv.GetParse(fmt.Sprintf(urls["security"], domain), resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 // Get the domain tagging dates for the given domain.
 //
 // For details, see https://sgraph.opendns.com/docs/api#latest_tags
-func (inv *Investigate) DomainTags(domain string) (respJson interface{}, err error) {
-	return inv.GetParse(fmt.Sprintf(urls["tags"], domain))
+func (inv *Investigate) DomainTags(domain string) ([]DomainTag, error) {
+	var resp []DomainTag
+	err := inv.GetParse(fmt.Sprintf(urls["tags"], domain), &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
-// Get the RR (Resource Record) History of the given domain or IP, given by query.
+func queryTypeSupported(qType string) bool {
+	_, ok := supportedQueryTypes[qType]
+	return ok
+}
+
+// Get the RR (Resource Record) History of the given IP.
+// queryType is the type of DNS query to perform on the database.
+// The following query types are supported:
+//
+// A, NS, MX, TXT, CNAME
+//
+// For details, see https://sgraph.opendns.com/docs/api#dnsrr_ip
+func (inv *Investigate) IpRRHistory(ip string, queryType string) (*IPRRHistory, error) {
+	// If the user tried an unsupported query type, return an error
+	if !queryTypeSupported(queryType) {
+		return nil, errors.New("unsupported query type")
+	}
+	resp := new(IPRRHistory)
+	err := inv.GetParse(fmt.Sprintf(urls["ip"], queryType, ip), resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+// Get the RR (Resource Record) History of the given domain.
+// queryType is the type of DNS query to perform on the database.
 // The following query types are supported:
 //
 // A, NS, MX, TXT, CNAME
 //
 // For details, see https://sgraph.opendns.com/docs/api#dnsrr_domain
-func (inv *Investigate) RRHistory(query string, queryType string) (interface{}, error) {
+func (inv *Investigate) DomainRRHistory(domain string, queryType string) (*DomainRRHistory, error) {
 	// If the user tried an unsupported query type, return an error
-	if _, ok := supportedQueryTypes[queryType]; !ok {
+	if !queryTypeSupported(queryType) {
 		return nil, errors.New("unsupported query type")
 	}
-	// if this is an IP, do an IP query
-	if match, err := regexp.MatchString(`(\d{1,3}\.){3}\d{1,3}`, query); match {
-		return inv.ipRRHistory(query, queryType)
-	} else if err != nil {
+	resp := new(DomainRRHistory)
+	err := inv.GetParse(fmt.Sprintf(urls["domain"], queryType, domain), resp)
+	if err != nil {
 		return nil, err
 	}
-
-	// otherwise, do a domain query
-	return inv.domainRRHistory(query, queryType)
+	return resp, nil
 }
 
-// Use ip to make the HTTP request: /dnsdb/ip/a/{ip}.json
-func (inv *Investigate) ipRRHistory(ip string, queryType string) (interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["ip"], queryType, ip))
-}
-
-// Use domain to make the HTTP request: /dnsdb/name/a/{domain}.json
-func (inv *Investigate) domainRRHistory(domain string, queryType string) (interface{}, error) {
-	return inv.GetParse(fmt.Sprintf(urls["domain"], queryType, domain))
-}
-
-func extractDomains(ldResp interface{}) ([]string, error) {
-	malfResp := errors.New("Malformed response.")
-	respList, ok := ldResp.([]interface{})
-
-	if !ok {
-		return nil, malfResp
-	}
-
+func extractDomains(respList []MaliciousDomain) []string {
 	var domainList []string
 	for _, entry := range respList {
-		entryMap, ok := entry.(map[string]interface{})
-		if !ok {
-			return nil, malfResp
-		}
-		if domain, ok := entryMap["name"].(string); !ok {
-			return nil, malfResp
-		} else {
-			domainList = append(domainList, domain)
-		}
+		domainList = append(domainList, entry.Domain)
 	}
-	return domainList, nil
+	return domainList
 }
 
 // Gets the latest known malicious domains associated with the given
@@ -265,17 +288,14 @@ func extractDomains(ldResp interface{}) ([]string, error) {
 //
 // For details, see https://sgraph.opendns.com/docs/api#latest_domains
 func (inv *Investigate) LatestDomains(ip string) ([]string, error) {
-	resp, err := inv.GetParse(fmt.Sprintf(urls["latest_domains"], ip))
+	var resp []MaliciousDomain
+	err := inv.GetParse(fmt.Sprintf(urls["latest_domains"], ip), &resp)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if domainList, err := extractDomains(resp); err != nil {
-		return nil, err
-	} else {
-		return domainList, nil
-	}
+	return extractDomains(resp), nil
 }
 
 // Converts the given list of items (domains or IPs)
@@ -288,48 +308,69 @@ func convertToSubUris(items []string, queryType string) []string {
 	return subUris
 }
 
-// convenience function to perform Get and parse the response body
-func (inv *Investigate) GetParse(subUri string) (interface{}, error) {
+// Convenience function to perform Get and parse the response body.
+// Parses the response into the value pointed to by v.
+func (inv *Investigate) GetParse(subUri string, v interface{}) error {
 	resp, err := inv.Get(subUri)
 
 	if err != nil {
 		inv.Log(err.Error())
-		return nil, err
+		return err
 	}
 
-	body, err := parseBody(resp.Body)
+	err = parseBody(resp.Body, v)
 
 	if err != nil && inv.verbose {
 		inv.Log(err.Error())
 	}
 
-	return body, err
+	return err
 }
 
-//convenience function to perform Post and parse the response body
-func (inv *Investigate) PostParse(subUri string, body io.Reader) (interface{}, error) {
+// Convenience function to perform Post and parse the response body.
+// Parses the response into the value pointed to by v.
+func (inv *Investigate) PostParse(subUri string, body io.Reader, v interface{}) error {
 	resp, err := inv.Post(subUri, body)
 
 	if err != nil {
 		inv.Log(err.Error())
-		return nil, err
+		return err
 	}
 
-	respBody, err := parseBody(resp.Body)
+	err = parseBody(resp.Body, v)
 
 	if err != nil {
 		inv.Log(err.Error())
 	}
 
-	return respBody, err
+	return err
 }
 
 // Parse an HTTP JSON response into a map
-func parseBody(respBody io.ReadCloser) (respJson interface{}, err error) {
+func parseBody(respBody io.ReadCloser, v interface{}) (err error) {
 	defer respBody.Close()
 	d := json.NewDecoder(respBody)
-	err = d.Decode(&respJson)
-	return respJson, err
+	switch unpackedValue := v.(type) {
+	case *CooccurrenceList:
+		err = d.Decode(unpackedValue)
+	case *RelatedDomainList:
+		err = d.Decode(unpackedValue)
+	case *[]MaliciousDomain:
+		err = d.Decode(unpackedValue)
+	case map[string]DomainCategorization:
+		err = d.Decode(&unpackedValue)
+	case *SecurityFeatures:
+		err = d.Decode(unpackedValue)
+	case *[]DomainTag:
+		err = d.Decode(unpackedValue)
+	case *DomainRRHistory:
+		err = d.Decode(unpackedValue)
+	case *IPRRHistory:
+		err = d.Decode(unpackedValue)
+	default:
+		err = errors.New("type of v is unsupported")
+	}
+	return err
 }
 
 // Log something to stdout
