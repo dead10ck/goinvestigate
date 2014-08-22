@@ -217,9 +217,9 @@ type DomainResourceRecordFeatures struct {
 	Age             int
 	TTLsMin         int      `json:"ttls_min"`
 	TTLsMax         int      `json:"ttls_max"`
-	TTLsMean        int      `json:"ttls_mean"`
-	TTLsMedian      int      `json:"ttls_median"`
-	TTLsStdDev      int      `json:"ttls_stddev"`
+	TTLsMean        float64  `json:"ttls_mean"`
+	TTLsMedian      float64  `json:"ttls_median"`
+	TTLsStdDev      float64  `json:"ttls_stddev"`
 	CountryCodes    []string `json:"country_codes"`
 	ASNs            []int
 	Prefixes        []string
