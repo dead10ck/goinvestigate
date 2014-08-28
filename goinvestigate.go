@@ -380,7 +380,7 @@ func parseBody(respBody io.ReadCloser, v interface{}) (err error) {
 	default:
 		err = errors.New("type of v is unsupported")
 	}
-	//return err
+
 	if err != nil {
 		body, readErr := ioutil.ReadAll(respBody)
 		if readErr != nil {
@@ -389,6 +389,7 @@ func parseBody(respBody io.ReadCloser, v interface{}) (err error) {
 		}
 		return JSONDecodeError{Err: err, Body: body}
 	}
+
 	return err
 }
 
