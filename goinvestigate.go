@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -346,6 +347,15 @@ func (inv *Investigate) PostParse(subUri string, body io.Reader, v interface{}) 
 	return err
 }
 
+type JSONDecodeError struct {
+	Err  error
+	Body []byte
+}
+
+func (e JSONDecodeError) Error() string {
+	return fmt.Sprintf("error: %s\nbody: %s", e.Err.Error(), e.Body)
+}
+
 // Parse an HTTP JSON response into a map
 func parseBody(respBody io.ReadCloser, v interface{}) (err error) {
 	defer respBody.Close()
@@ -369,6 +379,15 @@ func parseBody(respBody io.ReadCloser, v interface{}) (err error) {
 		err = d.Decode(unpackedValue)
 	default:
 		err = errors.New("type of v is unsupported")
+	}
+	//return err
+	if err != nil {
+		body, readErr := ioutil.ReadAll(respBody)
+		if readErr != nil {
+			log.Printf("error reading body: %v", readErr)
+			return err
+		}
+		return JSONDecodeError{Err: err, Body: body}
 	}
 	return err
 }
