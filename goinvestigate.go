@@ -89,7 +89,7 @@ func (inv *Investigate) Request(req *http.Request) (*http.Response, error) {
 	for ; resp.Body == nil && tries < maxTries; tries++ {
 		inv.Logf("%s %s\n", req.Method, req.URL.String())
 		resp, err = inv.client.Do(req)
-		if err != nil {
+		if err != nil || resp.StatusCode >= 300 {
 			if tries == maxTries-1 {
 				return nil,
 					errors.New(fmt.Sprintf("error: %v\nFailed all attempts. Skipping.", err))
