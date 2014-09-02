@@ -183,3 +183,14 @@ func TestLatestDomains(t *testing.T) {
 		t.Fatal("empty list")
 	}
 }
+
+func TestErrorResponse(t *testing.T) {
+	badInv := New("bad_key")
+	badInv.SetVerbose(true)
+	_, err := badInv.Categorization("www.google.com", true)
+
+	// should return an error
+	if err == nil {
+		t.Fatal("should return an authentication error")
+	}
+}

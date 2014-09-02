@@ -330,7 +330,7 @@ func (inv *Investigate) GetParse(subUri string, v interface{}) error {
 		return err
 	}
 
-	err = parseBody(resp.Body, v)
+	err = inv.parseBody(resp.Body, v)
 
 	if err != nil && inv.verbose {
 		inv.Log(err.Error())
@@ -349,7 +349,7 @@ func (inv *Investigate) PostParse(subUri string, body io.Reader, v interface{}) 
 		return err
 	}
 
-	err = parseBody(resp.Body, v)
+	err = inv.parseBody(resp.Body, v)
 
 	if err != nil {
 		inv.Log(err.Error())
@@ -358,47 +358,38 @@ func (inv *Investigate) PostParse(subUri string, body io.Reader, v interface{}) 
 	return err
 }
 
-type JSONDecodeError struct {
-	Err  error
-	Body []byte
-}
-
-func (e JSONDecodeError) Error() string {
-	return fmt.Sprintf("error: %s\nbody: %s", e.Err.Error(), e.Body)
-}
-
 // Parse an HTTP JSON response into a map
-func parseBody(respBody io.ReadCloser, v interface{}) (err error) {
+func (inv *Investigate) parseBody(respBody io.ReadCloser, v interface{}) (err error) {
 	defer respBody.Close()
-	d := json.NewDecoder(respBody)
+	body, err := ioutil.ReadAll(respBody)
+	if err != nil {
+		log.Printf("error reading body: %v", err)
+		return err
+	}
+
 	switch unpackedValue := v.(type) {
 	case *CooccurrenceList:
-		err = d.Decode(unpackedValue)
+		err = json.Unmarshal(body, unpackedValue)
 	case *RelatedDomainList:
-		err = d.Decode(unpackedValue)
+		err = json.Unmarshal(body, unpackedValue)
 	case *[]MaliciousDomain:
-		err = d.Decode(unpackedValue)
+		err = json.Unmarshal(body, unpackedValue)
 	case map[string]DomainCategorization:
-		err = d.Decode(&unpackedValue)
+		err = json.Unmarshal(body, &unpackedValue)
 	case *SecurityFeatures:
-		err = d.Decode(unpackedValue)
+		err = json.Unmarshal(body, unpackedValue)
 	case *[]DomainTag:
-		err = d.Decode(unpackedValue)
+		err = json.Unmarshal(body, unpackedValue)
 	case *DomainRRHistory:
-		err = d.Decode(unpackedValue)
+		err = json.Unmarshal(body, unpackedValue)
 	case *IPRRHistory:
-		err = d.Decode(unpackedValue)
+		err = json.Unmarshal(body, unpackedValue)
 	default:
 		err = errors.New("type of v is unsupported")
 	}
 
 	if err != nil {
-		body, readErr := ioutil.ReadAll(respBody)
-		if readErr != nil {
-			log.Printf("error reading body: %v", readErr)
-			return err
-		}
-		return JSONDecodeError{Err: err, Body: body}
+		inv.Logf("error unmarshaling JSON response: %v\nbody: %s", err, body)
 	}
 
 	return err
