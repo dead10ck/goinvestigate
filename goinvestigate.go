@@ -86,14 +86,25 @@ func (inv *Investigate) Request(req *http.Request) (*http.Response, error) {
 	var err error
 	tries := 0
 
-	for ; resp.Body == nil && tries < maxTries; tries++ {
+	for ; resp.Body == nil && tries <= maxTries; tries++ {
 		inv.Logf("%s %s\n", req.Method, req.URL.String())
 		resp, err = inv.client.Do(req)
-		if err != nil || resp.StatusCode >= 300 {
-			if tries == maxTries-1 {
-				return nil,
-					errors.New(fmt.Sprintf("error: %v\nFailed all attempts. Skipping.", err))
+		if err != nil || (resp.StatusCode >= 400 && resp.StatusCode < 600) {
+			// if it's a 400 error code, just return an error.
+			// otherwise, if it's a server error, retry
+			if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+				errStr := fmt.Sprintf("error: %v", err)
+				inv.Log(errStr)
+				inv.LogHTTPResponseBody(resp.Body)
+				return nil, errors.New(errStr)
 			}
+
+			if tries == maxTries {
+				errStr := fmt.Sprintf("error: %v\nFailed all attempts. Skipping.", err)
+				log.Print(errStr)
+				return nil, errors.New(errStr)
+			}
+
 			log.Printf("\nerror: %v\nTrying again: Attempt %d/%d\n", err, tries+1, maxTries)
 			resp = new(http.Response)
 		}
@@ -404,6 +415,17 @@ func (inv *Investigate) Log(s string) {
 func (inv *Investigate) Logf(fs string, args ...interface{}) {
 	if inv.verbose {
 		inv.log.Printf(fs, args...)
+	}
+}
+
+// Log the response body
+func (inv *Investigate) LogHTTPResponseBody(respBody io.ReadCloser) {
+	if inv.verbose {
+		bytes, err := ioutil.ReadAll(respBody)
+		if err != nil {
+			inv.Logf("error reading response body: %v", err)
+		}
+		inv.Logf("response body:\n%s", bytes)
 	}
 }
 
