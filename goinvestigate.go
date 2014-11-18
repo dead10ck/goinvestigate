@@ -3,7 +3,7 @@ API for the OpenDNS Security Graph / Investigate.
 
 To use it, use your Investigate API key to build an Investigate object.
 
-	key := "f29be9cc-f833-4a9a-b984-19dc4d5186ac"
+	key := "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 	inv, err := goinvestigate.New(key)
 
 	if err != nil {
